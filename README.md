@@ -6,7 +6,7 @@ This repository contains the flight control and guidance software for an autonom
 
 The core achievement of this project is the successful implementation of **Earth-Frame Proportional Navigation (PN)** , allowing a slower interceptor to mathematically "cut the corner" and intercept a faster circling target, solving the classic "Hound and Hare" aerospace geometry problem. 
 
-## **Demonstration** 🎥 
+## **Demonstration**  
 
 (https://www.linkedin.com/posts/divyansh-singh-b0b00622b_ros2-ardupilot-aerospaceengineering-ugcPost-7476949433369161728-PtRn/?utm_source=share&utm_medium=member_desktop&rcm=ACoAADl83rsB2bRNUZjOVPgndiEiE0jXt_Yud0g)
 ## **System Architecture** 
