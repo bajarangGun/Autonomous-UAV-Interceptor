@@ -1,0 +1,3 @@
+[console_scripts]
+truth_node = interceptor_ros.truth_node:main
+visualization_node = interceptor_ros.visualization_node:main

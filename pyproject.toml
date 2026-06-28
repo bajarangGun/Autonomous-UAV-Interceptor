@@ -1,0 +1,24 @@
+[tool.black]
+line-length = 100
+target-version = ['py310']
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+# Enable Pyflakes (F), pycodestyle (E, W), and isort (I)
+select = ["F", "E", "W", "I"]
+# Ignore line length violations if black handles it
+ignore = ["E501"] 
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+
+# --- NEW ADDITION ---
+[tool.pytest.ini_options]
+# Tells pytest to add the current directory to the Python path
+pythonpath = ["src"]
