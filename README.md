@@ -1,83 +1,345 @@
-Autonomous UAV Interceptor: 3D Proportional Navigation
+# Autonomous UAV Interceptor: 3D Proportional Navigation
 
-Overview
+## Overview
 
-This repository contains the flight control and guidance software for an autonomous UAV interceptor. Developed using ROS 2 and MAVROS, the system is designed to track and kinetically intercept highly maneuverable fixed-wing targets (Quadplanes) in full 3D space.
+This repository contains the flight control, perception, and guidance software for an **autonomous UAV interceptor**. Developed using **ROS 2** and **MAVROS**, the system is designed to track and kinetically intercept highly maneuverable fixed-wing targets (such as Quadplanes) in full **3D space**.
 
-The core achievement of this project is the successful implementation of Earth-Frame Proportional Navigation (PN), allowing a slower interceptor to mathematically "cut the corner" and intercept a faster circling target, solving the classic "Hound and Hare" aerospace geometry problem.
+The primary achievement of this project is the successful implementation of **Earth-Frame Proportional Navigation (PN)**, enabling a slower interceptor to mathematically *cut the corner* and intercept a faster circling target. This solves the classic **"Hound and Hare"** aerospace guidance problem.
 
-🎥 Demonstration
 
-[Link to your LinkedIn Video or YouTube Demo goes here]
 
-System Architecture
+# System Architecture
 
-The project utilizes a decoupled, high-reliability software architecture:
+The project follows a modular and high-reliability software architecture.
 
-ArduPilot SITL: Simulates the physical flight dynamics, aerodynamics, and momentum of an Iris quadcopter (Interceptor) and a Quadplane (Target).
+```
+                    +-----------------------+
+                    |   ArduPilot SITL      |
+                    |  (Flight Dynamics)    |
+                    +----------+------------+
+                               |
+                         MAVLink Telemetry
+                               |
+                      +--------v---------+
+                      | ROS 2 + MAVROS   |
+                      +--------+---------+
+                               |
+        +----------------------+----------------------+
+        |                      |                      |
+        |                      |                      |
++-------v------+      +--------v-------+      +------v------+
+| Flight Node  |      | Perception     |      | Visualization|
+|              |      | & Guidance     |      |    Node      |
++--------------+      +----------------+      +-------------+
+```
 
-ROS 2 / MAVROS: Handles high-frequency telemetry streaming (Pose/Velocity) and asynchronous command publishing.
+---
 
-Core Kinematics (interceptor_core): Pure-Python mathematical libraries for calculating Line-of-Sight (LOS) vectors, closing velocities, and proportional lateral accelerations.
+## Components
 
-3D Visualization (visualization_node): A dedicated node that translates live telemetry into nav_msgs/Path and visualization_msgs/Marker data for real-time engagement geometry rendering in RViz2.
+### ArduPilot SITL
 
-Guidance Methodology
+Simulates the physical flight dynamics, aerodynamics, and momentum of both the interceptor and the target UAV.
 
-The Problem: Pure Pursuit vs. Circling Targets
+---
 
-Initial testing utilized a Pure Pursuit guidance law, where the interceptor's velocity vector was pointed directly at the target's current position. Against a target in a loitering circle (QLOITER), this resulted in a continuous tail-chase. Because the simulated Iris quadcopter's physical top speed (limited by air resistance and tilt angle) was only marginally faster than the fixed-wing target's cruise speed, the intercept required excessive time and resulted in a massive spiral trajectory.
+### ROS 2 + MAVROS
 
-The Solution: Proportional Navigation (PN)
+Provides
 
-To achieve a rapid kinetic intercept, the guidance law was upgraded to Proportional Navigation.
+- High-frequency telemetry streaming
+- Pose and velocity estimation
+- MAVLink communication
+- Velocity command publishing through `geometry_msgs/Twist`
 
-Line-of-Sight (LOS) Rate: The system continuously calculates the derivative of the 3D vector between the interceptor and the target ($\dot{\lambda}$).
+---
 
-Lateral Acceleration: A lateral acceleration vector is generated proportional to the closing velocity and the LOS rate ($a = N \cdot V_c \cdot \dot{\lambda}$).
+### Core Kinematics (`interceptor_core`)
 
-Earth-Frame Translation: This acceleration is blended with the pursuit vector to command the drone's 3D Earth-Frame velocities ($V_x, V_y, V_z$).
+Pure Python mathematical libraries responsible for
 
-By utilizing ArduCopter's native WP_YAW_BEHAVIOR, the manual yaw loop was bypassed. The flight controller smoothly aligns the airframe with the commanded PN velocity vector, successfully cutting across the target's turning circle and reducing intercept time from minutes to seconds.
+- Line-of-Sight (LOS) computation
+- Relative position estimation
+- Closing velocity calculation
+- Proportional Navigation guidance
+- Unit-tested using **pytest**
 
-Repository Structure
+---
 
+### Vision & Perception
+
+Transforms camera pixel coordinates into physical **3D Line-of-Sight** angles for target localization.
+
+---
+
+### 3D Visualization (`visualization_node`)
+
+Publishes
+
+- `nav_msgs/Path`
+- `visualization_msgs/Marker`
+
+to RViz2 for real-time visualization of
+
+- UAV trajectories
+- Engagement geometry
+- Target mesh
+- Interceptor path
+
+---
+
+# Guidance Methodology
+
+## The Problem: Pure Pursuit
+
+The initial implementation used a **Pure Pursuit** guidance law.
+
+When the target aircraft performed a continuous loiter (QLOITER), the interceptor simply chased the target from behind.
+
+Since the interceptor's maximum physical speed was only slightly greater than the target's cruise speed, this resulted in
+
+- Continuous tail chase
+- Large spiral trajectories
+- Very long interception times
+
+---
+
+## The Solution: Proportional Navigation (PN)
+
+To achieve rapid interception, the guidance law was upgraded to **Earth-Frame Proportional Navigation**.
+
+### 1. Line-of-Sight Rate
+
+The system continuously computes the derivative of the Line-of-Sight vector
+
+\[
+\dot{\lambda}
+\]
+
+---
+
+### 2. Lateral Acceleration
+
+The commanded acceleration is
+
+\[
+a = N V_c \dot{\lambda}
+\]
+
+where
+
+- \(N\) = Navigation Constant
+- \(V_c\) = Closing Velocity
+- \(\dot{\lambda}\) = LOS Rate
+
+---
+
+### 3. Earth-Frame Velocity Commands
+
+The computed lateral acceleration is blended with the pursuit vector to produce
+
+- \(V_x\)
+- \(V_y\)
+- \(V_z\)
+
+commands in the Earth frame.
+
+Instead of manually commanding yaw, the system relies on ArduCopter's native
+
+```
+WP_YAW_BEHAVIOR
+```
+
+parameter.
+
+The flight controller automatically aligns the UAV with the desired velocity vector, allowing the interceptor to
+
+- Cut across the target's turning circle
+- Reduce intercept time dramatically
+- Produce realistic missile-like trajectories
+
+---
+
+# Repository Structure
+
+```text
 interceptor_project/
-├── archive/                # Deprecated vision-based processing nodes
-├── meshes/                 # 3D STL files for RViz2 target visualization
+│
+├── meshes/
+│   ├── target.dae
+│   ├── interceptor.stl
+│   └── ...
+│
 ├── src/
-│   ├── interceptor_core/   # Pure-math kinematics and guidance libraries
-│   └── interceptor_ros/    # ROS 2 Nodes (Truth Node, Visualizer Node)
-├── tests/                  # Pytest unit tests for guidance algorithms
-├── setup.py                # ROS 2 package configuration
-└── pyproject.toml          # Code formatting (Black) and static typing (Mypy)
+│   ├── interceptor_core/
+│   │   ├── guidance.py
+│   │   ├── kinematics.py
+│   │   ├── perception.py
+│   │   └── ...
+│   │
+│   └── interceptor_ros/
+│       ├── interceptor_node.py
+│       ├── visualization_node.py
+│       └── ...
+│
+├── tests/
+│   ├── test_guidance.py
+│   ├── test_camera.py
+│   └── ...
+│
+├── package.xml
+├── setup.py
+├── pyproject.toml
+└── README.md
+```
 
+---
 
-Running the Simulation
+# Running the Simulation
 
-Launch ArduPilot SITL:
-Start two instances of ArduPilot SITL (Drone 0: Interceptor, Drone 1: Target).
+## 1. Launch ArduPilot SITL
 
-Configure Flight Limits (Interceptor Console):
-Unlock the drone's physical agility to allow high-speed maneuvering:
+Launch two SITL instances
 
+- **Drone 0** → Interceptor
+- **Drone 1** → Target
+
+---
+
+## 2. Configure Flight Limits
+
+Increase the interceptor agility.
+
+```bash
 param set WPNAV_SPEED 2500
 param set WPNAV_ACCEL 1000
+```
 
+---
 
-Launch ROS 2 Nodes:
+## 3. Build ROS 2 Workspace
 
-ros2 run interceptor_project truth_node
+```bash
+colcon build --symlink-install
+```
+
+```bash
+source install/setup.bash
+```
+
+---
+
+## 4. Launch Nodes
+
+Interceptor
+
+```bash
+ros2 run interceptor_project interceptor_node
+```
+
+Visualization
+
+```bash
 ros2 run interceptor_project visualizer_node
+```
 
+---
 
-Visualize in RViz2:
-Open RViz2, set the fixed frame to map, and subscribe to /visuals/interceptor_path and /visuals/target_shape.
+# RViz2 Visualization
 
-Open Source & Contributions
+Open RViz2
 
-This project is open-source and intended for academic, research, and engineering portfolio purposes. If you are researching UAV swarm dynamics, missile guidance laws, or ROS 2 integration, feel free to fork this repository, open an issue, or submit a pull request!
+Set
 
-License
+```
+Fixed Frame = map
+```
 
-This project is licensed under the MIT License.
+Subscribe to
+
+```
+/visuals/interceptor_path
+```
+
+and
+
+```
+/visuals/target_shape
+```
+
+to observe
+
+- Live UAV trajectory
+- Target mesh
+- Path history
+- Engagement geometry
+
+---
+
+# Features
+
+- Autonomous UAV interception
+- Full 3D Earth-Frame Proportional Navigation
+- ROS 2 + MAVROS integration
+- ArduPilot SITL support
+- Modular architecture
+- Real-time RViz2 visualization
+- Camera-based perception pipeline
+- Unit-tested mathematical guidance libraries
+- Easily extendable for future vision algorithms
+
+---
+
+# Technologies Used
+
+- ROS 2
+- MAVROS
+- MAVLink
+- ArduPilot SITL
+- Python
+- OpenCV
+- NumPy
+- RViz2
+- Gazebo Harmonic
+- PyTest
+
+---
+
+# Future Improvements
+
+- Object detection using YOLO
+- Multi-target tracking
+- Kalman Filter-based target prediction
+- Optical flow integration
+- GPS-denied interception
+- Swarm interception
+- Reinforcement Learning guidance
+- Real hardware deployment
+
+---
+
+# Open Source & Contributions
+
+This project is open source and intended for
+
+- Academic research
+- Robotics development
+- UAV guidance research
+- Engineering portfolio demonstrations
+
+Contributions are welcome!
+
+Feel free to
+
+- Fork the repository
+- Open an issue
+- Submit a pull request
+- Suggest improvements
+
+---
+
+# License
+
+This project is licensed under the **MIT License**.
+
+See the `LICENSE` file for more details.
