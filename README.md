@@ -7,31 +7,12 @@ This repository contains the flight control, perception, and guidance software f
 
 The core achievement of this project is the successful implementation of **Earth-Frame Proportional Navigation (PN)**, allowing a slower interceptor to mathematically "cut the corner" and intercept a faster circling target, solving the classic "Hound and Hare" aerospace geometry problem.
 
-### 🎥 Demonstration
 
-[Link to your LinkedIn Video or YouTube Demo goes here]
-
-## System Architecture
-
-The project utilizes a decoupled, high-reliability software architecture:
-
-* **ArduPilot SITL:** Simulates the physical flight dynamics, aerodynamics, and momentum of the interceptor and target UAVs.
-
-* **ROS 2 / MAVROS:** Handles high-frequency telemetry streaming (Pose/Velocity) and asynchronous command publishing via `geometry_msgs/Twist`.
-
-* **Core Kinematics (`interceptor_core`):** Pure-Python mathematical libraries for calculating Line-of-Sight (LOS) vectors, closing velocities, and proportional lateral accelerations. Fully unit-tested using `pytest`.
-
-* **Vision & Perception:** Translates 2D pixel coordinates from a camera feed into physical 3D Line-of-Sight angles.
-
-* **3D Visualization (`visualization_node`):** A dedicated ROS 2 node that translates live telemetry into `nav_msgs/Path` and 3D `visualization_msgs/Marker` meshes for real-time engagement geometry rendering in **RViz2**.
 
 ## Guidance Methodology
 
-### The Problem: Pure Pursuit vs. Circling Targets
 
-Initial testing utilized a **Pure Pursuit** guidance law. Against a target in a loitering circle (QLOITER), this resulted in a continuous tail-chase. Because the simulated quadcopter's physical top speed (limited by air resistance and tilt angle) was only marginally faster than the fixed-wing target's cruise speed, the intercept required excessive time and resulted in a massive spiral trajectory.
-
-### The Solution: Proportional Navigation (PN)
+### : Proportional Navigation (PN)
 
 To achieve a rapid kinetic intercept, the guidance law was upgraded to **Proportional Navigation**.
 
